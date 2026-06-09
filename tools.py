@@ -13,6 +13,7 @@ Tools:
 """
 
 import os
+import string
 
 from dotenv import load_dotenv
 from groq import Groq
@@ -69,8 +70,59 @@ def search_listings(
 
     Before writing code, fill in the Tool 1 section of planning.md.
     """
-    # Replace this with your implementation
-    return []
+    
+    # load all listings
+    all_listings = load_listings()
+
+    # filter listings by price and size
+    if max_price == None:
+        max_price = float('inf')
+
+    size = size.lower() if size != None else None
+    filtered_listings = []
+
+    for listing in all_listings:
+        if listing['price'] <= max_price:
+            if 'one size' in listing['size'].lower():
+                filtered_listings.append(listing)
+                continue
+            
+            # tops are specified with letters (S, M, L, XL), one listing can have multiple sizes separated by '/'
+            top_sizes = listing['size'].lower().split('/')
+            # bottoms are specifed with either Waist, Length, or both with a number (e.g. W32, L30, W30 L30)
+            bottom_sizes = listing['size'].lower().split(" ")
+            # shoes are specified with country and number (e.g. US 8), actually gets caught in other two checks
+            # other sizes are: "One Size", "Adjustable", "One Size Fits Most", etc. This should match any query
+            
+            if size == None or size in top_sizes or size in bottom_sizes:
+                filtered_listings.append(listing)
+
+
+    # score listings by keyword overlap with description and title
+    keywords = set(description.lower().split())
+    scored_listings = []
+    for listing in filtered_listings:
+        # create the set of words from description
+        # Remove punctuation using translate
+        translator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
+        clean_desc = listing['description'].lower().translate(translator)
+        listing_kw = set(clean_desc.split())
+        # consider adding title into match keywords.
+        # clean_title = listing['title'].lower().translate(translator)
+        # listing_kw = set(clean_title.split() + clean_desc.split())
+
+        # calculate score between listing and description
+        score = len(keywords.intersection(listing_kw))
+        if score > 0:
+            scored_listings.append((score, listing))
+
+    # keep as backup for later if we want to do this
+    # sort by score (highest first), then by price (lowest/cheapest first) to break ties
+    # scored_listings.sort(key=lambda x: (-x[0], x[1]['price']))
+
+    scored_listings.sort(key=lambda x: -x[0])
+
+    return [listing for _, listing in scored_listings]
 
 
 # ── Tool 2: suggest_outfit ────────────────────────────────────────────────────
@@ -135,3 +187,10 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     """
     # Replace this with your implementation
     return ""
+
+if __name__ == "__main__":
+    # Quick manual test for search_listings
+    results = search_listings("graphic tee", size="L", max_price=35)
+    for r in results:
+        # pretty print the results on one line with consistent separators and distance between fields
+        print(f"{r['title'][:30]:30} | {r['size']:10} | ${r['price']:6.2f}")

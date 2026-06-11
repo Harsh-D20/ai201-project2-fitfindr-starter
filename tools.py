@@ -19,8 +19,11 @@ from dotenv import load_dotenv
 from groq import Groq
 
 from utils.data_loader import load_listings
+from utils.data_loader import get_empty_wardrobe, get_example_wardrobe
 
 load_dotenv()
+
+MODEL = "llama-3.3-70b-versatile"
 
 
 # ── Groq client ───────────────────────────────────────────────────────────────
@@ -129,7 +132,7 @@ def search_listings(
 
 def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     """
-    Given a thrifted item and the user's wardrobe, suggest 1–2 complete outfits.
+    Given a thrifted item and the user's wardrobe, suggest 1-2 complete outfits.
 
     Args:
         new_item: A listing dict (the item the user is considering buying).
@@ -152,9 +155,39 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
 
     Before writing code, fill in the Tool 2 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
 
+    PROMPT_BASE = "You are a stylist helping a client put together outfits. They are considering buying the following thrifted item:\n" \
+    f"{new_item['title']}\n- {new_item['description']}\n- Category: {new_item['category']}\n- Style tags: {', '.join(new_item['style_tags'])}\n- Size: {new_item['size']}\n- Condition: {new_item['condition']}\n- Colors: {', '.join(new_item['colors'])}\n- Brand: {new_item['brand']}\n\n"
+
+    WARDROBE_PROMPT = ""
+
+    # empty wardrobe
+    if wardrobe['items'] == []:
+        WARDROBE_PROMPT = "Provide 1-2 sentences of general styling advice for how to wear the item, what kinds of pieces it pairs well with, and what vibe it suits."
+
+    else:
+        WARDROBE_PROMPT = "Their current wardrobe includes the folllowing items: \n"
+    
+        for item in wardrobe['items']:
+            WARDROBE_PROMPT += f"- {item['name']} (Category: {item['category']}), Color(s): {', '.join(item['colors'])}, Style tags: {', '.join(item['style_tags'])}, Notes: {item['notes']}\n"
+
+        WARDROBE_PROMPT += "\nBased on the thrifted item and their wardrobe, suggest one outfit combination that incorporates the thrifted item and pieces from their wardrobe. Describe the outfit in 1-2 sentences."
+        
+    FINAL_PROMPT = PROMPT_BASE + WARDROBE_PROMPT
+    
+    GROQ_CLIENT = _get_groq_client()
+
+    response = GROQ_CLIENT.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "user", "content": FINAL_PROMPT}
+        ],
+        temperature=0.5,
+    )
+
+    message = response.choices[0].message.content
+
+    return message
 
 # ── Tool 3: create_fit_card ───────────────────────────────────────────────────
 
@@ -167,7 +200,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
         new_item: The listing dict for the thrifted item.
 
     Returns:
-        A 2–4 sentence string usable as an Instagram/TikTok caption.
+        A 2-4 sentence string usable as an Instagram/TikTok caption.
         If outfit is empty or missing, return a descriptive error message
         string — do NOT raise an exception.
 
@@ -185,12 +218,43 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
 
     Before writing code, fill in the Tool 3 section of planning.md.
     """
-    # Replace this with your implementation
-    return ""
+    if not outfit.strip():
+        return "ERROR: Outfit suggestion is empty. Cannot create fit card without an outfit."
+
+    PROMPT = f"You are a fashion influencer creating an Instagram and/or TikTok caption for an Outfit of the Day (OOTD) post." \
+        " You have created an outfit by combining what's in your wardrobe with an item you've thrifted. The item you thrifted is:\n" \
+        f"{new_item['title']}\n- {new_item['description']}\n- Category: {new_item['category']}\n- Style tags: {', '.join(new_item['style_tags'])}\n- Size: {new_item['size']}\n- Condition: {new_item['condition']}\n- Colors: {', '.join(new_item['colors'])}\n- Brand: {new_item['brand']}\n- Platform: {new_item['platform']}\n\n" \
+        f"The outfit you have created is described here:\n{outfit}\n\n" \
+        "Given this outfit and this thrifted item, write a casual and authentic 2-4 sentence caption for this OOTD that specifically captures the vibe of the outfit and naturally mentions the new item, its price, and platform."
+
+    GROQ_CLIENT = _get_groq_client()
+
+    response = GROQ_CLIENT.chat.completions.create(
+        model=MODEL,
+        messages=[
+            {"role": "user", "content": PROMPT}
+        ],
+        temperature=0.5,
+    )
+
+    message = response.choices[0].message.content
+
+    return message
+
 
 if __name__ == "__main__":
-    # Quick manual test for search_listings
-    results = search_listings("graphic tee", size="L", max_price=35)
-    for r in results:
-        # pretty print the results on one line with consistent separators and distance between fields
-        print(f"{r['title'][:30]:30} | {r['size']:10} | ${r['price']:6.2f}")
+    # # Quick manual test for search_listings
+    # results = search_listings("graphic tee", size="L", max_price=35)
+    # for r in results:
+    #     # pretty print the results on one line with consistent separators and distance between fields
+    #     print(f"{r['title'][:30]:30} | {r['size']:10} | ${r['price']:6.2f}")
+
+    lsts = load_listings()
+    item1 = lsts[0]
+    item2 = lsts[1]
+    
+    style = suggest_outfit(wardrobe=get_example_wardrobe(), new_item=item1)
+    style_empty = suggest_outfit(wardrobe=get_empty_wardrobe(), new_item=item2)
+
+    print(create_fit_card(style, item1))
+    print(create_fit_card("\t\t\n", item2))

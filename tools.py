@@ -109,10 +109,9 @@ def search_listings(
         # Remove punctuation using translate
         translator = str.maketrans(string.punctuation, ' ' * len(string.punctuation))
         clean_desc = listing['description'].lower().translate(translator)
-        listing_kw = set(clean_desc.split())
         # consider adding title into match keywords.
-        # clean_title = listing['title'].lower().translate(translator)
-        # listing_kw = set(clean_title.split() + clean_desc.split())
+        clean_title = listing['title'].lower().translate(translator)
+        listing_kw = set(clean_title.split() + clean_desc.split())
 
         # calculate score between listing and description
         score = len(keywords.intersection(listing_kw))
@@ -252,7 +251,7 @@ if __name__ == "__main__":
     lsts = load_listings()
     item1 = lsts[0]
     item2 = lsts[1]
-    
+
     style = suggest_outfit(wardrobe=get_example_wardrobe(), new_item=item1)
     style_empty = suggest_outfit(wardrobe=get_empty_wardrobe(), new_item=item2)
 

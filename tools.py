@@ -155,24 +155,24 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
     Before writing code, fill in the Tool 2 section of planning.md.
     """
 
-    PROMPT_BASE = "You are a stylist helping a client put together outfits. They are considering buying the following thrifted item:\n" \
+    PROMPT_BASE = "You are a stylist helping me put together outfits. I am considering buying the following thrifted item:\n" \
     f"{new_item['title']}\n- {new_item['description']}\n- Category: {new_item['category']}\n- Style tags: {', '.join(new_item['style_tags'])}\n- Size: {new_item['size']}\n- Condition: {new_item['condition']}\n- Colors: {', '.join(new_item['colors'])}\n- Brand: {new_item['brand']}\n\n"
 
-    WARDROBE_PROMPT = ""
+    wardrobe_prompt = ""
 
     # empty wardrobe
     if wardrobe['items'] == []:
-        WARDROBE_PROMPT = "Provide 1-2 sentences of general styling advice for how to wear the item, what kinds of pieces it pairs well with, and what vibe it suits."
+        wardrobe_prompt = "Provide 1-2 sentences of general styling advice for how to wear the item, what kinds of pieces it pairs well with, and what vibe it suits."
 
     else:
-        WARDROBE_PROMPT = "Their current wardrobe includes the folllowing items: \n"
+        wardrobe_prompt = "My current wardrobe includes the folllowing items: \n"
     
         for item in wardrobe['items']:
-            WARDROBE_PROMPT += f"- {item['name']} (Category: {item['category']}), Color(s): {', '.join(item['colors'])}, Style tags: {', '.join(item['style_tags'])}, Notes: {item['notes']}\n"
+            wardrobe_prompt += f"- {item['name']} (Category: {item['category']}), Color(s): {', '.join(item['colors'])}, Style tags: {', '.join(item['style_tags'])}, Notes: {item['notes']}\n"
 
-        WARDROBE_PROMPT += "\nBased on the thrifted item and their wardrobe, suggest one outfit combination that incorporates the thrifted item and pieces from their wardrobe. Describe the outfit in 1-2 sentences."
+        wardrobe_prompt += "\nBased on the thrifted item and my wardrobe, suggest one outfit combination that incorporates the thrifted item and pieces from my wardrobe. Describe the outfit in 1-2 sentences."
         
-    FINAL_PROMPT = PROMPT_BASE + WARDROBE_PROMPT
+    FINAL_PROMPT = PROMPT_BASE + wardrobe_prompt
     
     GROQ_CLIENT = _get_groq_client()
 
@@ -220,7 +220,7 @@ def create_fit_card(outfit: str, new_item: dict) -> str:
     if not outfit.strip():
         return "ERROR: Outfit suggestion is empty. Cannot create fit card without an outfit."
 
-    PROMPT = f"You are a fashion influencer creating an Instagram and/or TikTok caption for an Outfit of the Day (OOTD) post." \
+    PROMPT = f"You are a fashion influencer helping an Instagram and/or TikTok caption for an Outfit of the Day (OOTD) post." \
         " You have created an outfit by combining what's in your wardrobe with an item you've thrifted. The item you thrifted is:\n" \
         f"{new_item['title']}\n- {new_item['description']}\n- Category: {new_item['category']}\n- Style tags: {', '.join(new_item['style_tags'])}\n- Size: {new_item['size']}\n- Condition: {new_item['condition']}\n- Colors: {', '.join(new_item['colors'])}\n- Brand: {new_item['brand']}\n- Platform: {new_item['platform']}\n\n" \
         f"The outfit you have created is described here:\n{outfit}\n\n" \
@@ -256,4 +256,4 @@ if __name__ == "__main__":
     style_empty = suggest_outfit(wardrobe=get_empty_wardrobe(), new_item=item2)
 
     print(create_fit_card(style, item1))
-    print(create_fit_card("\t\t\n", item2))
+    print(create_fit_card(style_empty, item2))
